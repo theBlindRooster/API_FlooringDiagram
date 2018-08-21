@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+
+<style>
+svg {
+	cursor:crosshair;
+}
+.svgStyle{
+	fill:#75beff;
+}
+</style>
+<div class="container-fluid" style="padding-top: 80px;">
+	<div class="row">
+		<div class="col-lg-9">
+			<h2 class="text-center">Diagram</h2>
+			<div id="test"></div>
+			<div class="row">
+				<div class="col-sm-12 text-center">
+					<span id="level-down" style="display:inline-block; padding:5px 10px; cursor:pointer;"><i class="fa fa-caret-left" style="font-size:26px"></i></span>
+					<span style="display:inline-block; margin:0px 5px;"><h3 id="level-head" style="display:inline-block; margin:0 25;">Level</h3></span>
+					<span id="level-up" style="display:inline-block; padding:5px 10px; cursor:pointer;"><i class="fa fa-caret-right" style="font-size:26px"></i></span>
+				</div>
+			</div>
+			<div id="coordinates"></div>
+			<div id="diagram" class="text-center"></div>
+		</div>
+		<div class="col-lg-3">
+			<h2 style="margin-bottom:20px;">Rooms</h2>
+			<div class="row">
+				<div class="col-sm-12">
+					<div id="tools" style="margin-bottom:20px;">
+						<button id="butt-clear" class="btn btn-default">Clear Points</button>
+					</div>
+					<div id="rooms"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+</body>
+<script>
+loadData={
+	'pid':1,
+	'cid':56
+};
+
+function rooms(data,floor){
+	var append="rooms";
+	_(append).innerHTML="";
+	for(i=0;i<data.length;i++){
+		if(data[i]['floorlevel']==floor){
+			var id="room_"+data[i]['planflooringdiagramcoordsid'];
+			var d=document.createElement("DIV");
+			d.setAttribute("ID",id);
+			_(append).appendChild(d);
+			
+			var h=document.createElement("H4");
+			var ht=document.createTextNode(data[i]['roomname']);
+			h.appendChild(ht);
+			_(append).appendChild(h);
+			
+			if(data[i]['coordinates']!="" && data[i]['coordinates']!=null){
+				var s=document.createElement("SMALL");
+				var em=document.createElement("EM")
+				var st=document.createTextNode(" Saved");
+				em.appendChild(st)
+				s.appendChild(em)
+				h.appendChild(s);
+				//_(append).appendChild(document.createElement("BR"));
+				
+				var bclear=document.createElement("BUTTON")
+				bclear.setAttribute("CLASS","btn btn-link");
+				bclear.setAttribute("VALUE","clear_"+data[i]['planflooringdiagramcoordsid']);
+				bclear.setAttribute("STYLE","padding-left:0px;");
+				bcleart=document.createTextNode("Redraw Room");
+				bclear.appendChild(bcleart);
+				_(append).appendChild(bclear);
+				
+			} else {
+				var s=document.createElement("SMALL");
+				var em=document.createElement("EM")
+				var st=document.createTextNode(" Available");
+				em.appendChild(st)
+				s.appendChild(em)
+				h.appendChild(s);
+				
+				var bsave=document.createElement("BUTTON")
+				bsave.setAttribute("CLASS","btn btn-link");
+				bsave.setAttribute("VALUE","save_"+data[i]['planflooringdiagramcoordsid']);
+				bsave.setAttribute("STYLE","padding-left:0px;");
+				bsavet=document.createTextNode("Save");
+				bsave.appendChild(bsavet);
+				_(append).appendChild(bsave);
+				
+			}
+			
+			
+			
+			_(append).appendChild(document.createElement("HR"));
+		}
+	}
+	
+}
+var diagCount=0;
+var xmlns="http://www.w3.org/2000/svg";
+var xlinkns="http://www.w3.org/1999/xlink";
+var diagrams=0;
+var coords=null;
+var diag=null;
+
+function _(id){
+	return document.getElementById(id);
+}
+function buildDiagram(diag,coords,i){
+	_('diagram').innerHTML='';
+	var id='level_'+diag[i]['floorlevel'];
+	var d=document.createElement("DIV");
+	d.setAttribute("id",id);
+	_('diagram').appendChild(d);
+	
+	_('level-head').innerHTML='Level '+diag[i]['floorlevel'];
+	
+	/*start looping here*/
+	var svgid="svg_level";
+	var svg=document.createElementNS(xmlns,"svg");
+	svg.setAttributeNS(null,"id",svgid);
+	svg.setAttributeNS(null,"width","800");
+	svg.setAttributeNS(null,"height","900");
+	svg.setAttributeNS(null,"viewbox","0 0 800 900");
+	_(id).appendChild(svg);
+	
+	poly(diag[i]['floorlevel'],coords,svgid,'svgStyle')
+		
+	var img=document.createElementNS(xmlns,"image");
+	img.setAttributeNS(null,"id","level_image"+diag[i]['floorlevel']);
+	img.setAttributeNS(null,"class","imgDiagram");
+	img.setAttributeNS(null,"x","0");
+	img.setAttributeNS(null,"y","0");
+	img.setAttributeNS(null,"width","100%");
+	img.setAttributeNS(null,"height","100%");
+	img.setAttributeNS(xlinkns,"href",diag[i]['diagramlocation']);
+	_(svgid).appendChild(img);
+	/*
+	var gid='g_'+diag[i]['floorlevel'];
+	var g=document.createElementNS(xmlns,"g");
+	g.setAttributeNS(null,"id",gid);
+	_(svgid).appendChild(g);
+	*/
+	group(svgid,'g_'+diag[i]['floorlevel']);
+	poly(diag[i]['floorlevel'],coords,'g_'+diag[i]['floorlevel'],'clSVGClick','click');
+	group(svgid,'SVGDraw');
+	group(svgid,'SVGLine');
+	group(svgid,'SVGPoint');
+	
+	var l=document.createElementNS(xmlns,"line");
+	l.setAttributeNS(null,"style","stroke:#3bff00;stroke-width:2");
+	_('SVGLine').appendChild(l)
+}
+function group(id,gid){
+	var g=document.createElementNS(xmlns,"g");
+	g.setAttributeNS(null,"id",gid);
+	_(id).appendChild(g);
+}
+function poly(level,coords,id,cl,layer){
+	for(i=0;i<coords.length;i++){
+		if(coords[i]['floorlevel']==level){
+			if(coords[i]['coordinates']!=null && coords[i]['coordinates']!=''){
+				var p=document.createElementNS(xmlns,"polygon");
+				p.setAttributeNS(null,"id",'g_'+coords[i]['roomname']);
+				p.setAttributeNS(null,"class",cl);
+				p.setAttributeNS(null,"points",coords[i]['coordinates']);
+				if(layer == 'click'){
+					p.setAttributeNS(null,"style",'opacity:0;');
+					p.setAttributeNS(null,"id",'g_'+coords[i]['roomname']);
+				} else {
+					p.setAttributeNS(null,"id",coords[i]['roomname']);
+				}
+				_(id).appendChild(p);
+			}	
+		}
+	}
+}
+/*----JQUERY LOAD----*/
+$(document).ready(function(){
+	$.post("procs/procDiagramPlot.php",
+		{
+		pid:loadData.pid,
+		cid:loadData.cid,
+		func:'load',
+		
+		}
+		,function(data){
+			buildDiagram(data['diag'], data['rooms'],diagCount);
+			rooms(data['rooms'],data['diag'][diagCount]['floorlevel']);
+			diagrams=data['diag'].length;
+			//$("#test").html(JSON.stringify(data));
+	},'json');
+});
+
+/*----------CHANGING diagrams------------*/
+function levelChange(direction){
+	if(direction == 'up'){
+		if(diagCount < diagrams-1){
+			diagCount++;
+		} else {
+			diagCount=0;
+		}
+	}
+	if(direction == 'down'){
+		if(diagCount > 0){
+			diagCount--;
+		} else {
+			diagCount=diagrams-1;
+		}
+	}
+}
+$(document).ready(function(){
+	$("#level-down").click(function(){
+		levelChange('down');
+		$.post("procs/procDiagramPlot.php",
+			{
+			pid:loadData.pid,
+			cid:loadData.cid,
+			func:'load',
+			
+			}
+			,function(data){
+				buildDiagram(data['diag'], data['rooms'],diagCount);
+				rooms(data['rooms'],data['diag'][diagCount]['floorlevel']);
+		},'json');
+	});
+	$("#level-up").click(function(){
+		levelChange('up');
+		$.post("procs/procDiagramPlot.php",
+			{
+			pid:loadData.pid,
+			cid:loadData.cid,
+			func:'load',
+			
+			}
+			,function(data){
+				buildDiagram(data['diag'], data['rooms'],diagCount);
+				rooms(data['rooms'],data['diag'][diagCount]['floorlevel']);
+		},'json');
+	});
+});
+/*----------ROOM EDIT FUNCTIONS------------*/
+$("#rooms").click(function(){
+	if(event.target.nodeName=="BUTTON"){
+		if(event.target.value.indexOf('clear')==0){
+			var id=event.target.value.substring(6);
+			$.post("procs/procDiagramPlot.php",
+				{
+				pid:loadData.pid,
+				cid:loadData.cid,
+				id: id,
+				func:'clear'				
+				}
+				,function(data){
+					buildDiagram(data['diag'], data['rooms'],diagCount);
+					rooms(data['rooms'],data['diag'][diagCount]['floorlevel']);
+			},'json');
+		} else if(event.target.value.indexOf('save')==0){
+			var id=event.target.value.substring(5);
+			$.post("procs/procDiagramPlot.php",
+				{
+				pid:loadData.pid,
+				cid:loadData.cid,
+				id: id,
+				coords:plot.toString(),
+				func:'update'				
+				}
+				,function(data){
+					buildDiagram(data['diag'], data['rooms'],diagCount);
+					rooms(data['rooms'],data['diag'][diagCount]['floorlevel']);
+			},'json');
+			plot=[];
+		}
+	}
+})
+
+
+</script>
+<!--
+<script src="js/diagramDraw.js"></script>
+<script src="js/nav.js"></script>
+-->
+</html>
