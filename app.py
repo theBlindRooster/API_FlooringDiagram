@@ -22,7 +22,7 @@ app = Flask(__name__)
 mydb = mysql.connector.connect(
   host="localhost",
   user="root",
-  passwd="",
+  passwd=,
   database="pfd"
 )
 #################################################
@@ -32,26 +32,33 @@ mydb = mysql.connector.connect(
 @app.route("/api/diagram", methods=["GET", "POST"])
 def send():
     if request.method == "POST":
-        # nickname = request.form["nickname"]
-        # age = request.form["age"]
+        coords=request.form['coords']
+        areaid=request.form['areaid']
+        return "coordinates= "+str(coords)+" id="+str(areaid)
 
-        # pet = Pet(nickname=nickname, age=age)
-        # db.session.add(pet)
-        # db.session.commit()
-
-        return "Thanks for the form data!"
-
-    output=[]
+    rooms=[]
+    diagram=[]
     cursor = mydb.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM planflooringdiagramcoords")
+    cursor.execute("SELECT * FROM planflooringdiagramcoords WHERE communityid = "+str(request.args.get('cid'))+" AND planid = "+str(request.args.get('pid')))
 
     for row in cursor:
-        output.append(row)
+        rooms.append(row)
+    
+    cursor.execute("SELECT * FROM planflooringdiagram WHERE planid = "+str(request.args.get('pid')))
+
+    for row in cursor:
+        diagram.append(row)
+   
+    output={'rooms':rooms,'diag':diagram}
     return jsonify(output)
 
 @app.route("/")
 def home():
-    return "Welcome!"
+    return render_template('index.html')
+
+@app.route("/diagram")
+def diagram():
+    return render_template('diagramconfig.html')
 
 if __name__ == "__main__":
     app.run()
